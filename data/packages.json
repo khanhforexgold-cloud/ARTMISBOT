@@ -1,0 +1,44 @@
+[
+  {
+    "tag": "DỄ BẮT ĐẦU",
+    "name": "Gói Demo",
+    "priceMain": "299",
+    "priceUnit": "K",
+    "desc": "Dùng thử ngay để trải nghiệm hệ thống trước khi nâng cấp.",
+    "features": [
+      "Trải nghiệm 3–7 ngày",
+      "Phù hợp người mới",
+      "Cài đặt nhanh, dùng ngay"
+    ],
+    "button": "Nhận demo",
+    "primary": false
+  },
+  {
+    "tag": "ĐƯỢC CHỌN NHIỀU NHẤT",
+    "name": "Gói Pro",
+    "priceMain": "999",
+    "priceUnit": "K",
+    "desc": "Gói dùng chính cho trader muốn giao dịch thực chiến mỗi ngày.",
+    "features": [
+      "Full BOT cho XAUUSD",
+      "Tín hiệu rõ ràng",
+      "Dễ dùng, hiệu quả hơn"
+    ],
+    "button": "Mua ngay",
+    "primary": true
+  },
+  {
+    "tag": "CAO CẤP",
+    "name": "Gói VIP",
+    "priceMain": "2.5",
+    "priceUnit": "TR",
+    "desc": "Gói tối ưu lợi nhuận cho người muốn được hỗ trợ sát hơn.",
+    "features": [
+      "BOT + hỗ trợ 1-1",
+      "Hướng dẫn vào lệnh",
+      "Ưu tiên support"
+    ],
+    "button": "Đăng ký VIP",
+    "primary": false
+  }
+]
