@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARTEMIS Admin PRO Postgres</title>
+  <style>
+    :root{
+      --bg:#07101f; --bg2:#0b1831; --line:rgba(255,255,255,.09); --text:#edf3ff;
+      --muted:#b8c6e3; --gold:#f3c85b; --gold2:#ffe29a; --shadow:0 22px 60px rgba(0,0,0,.38);
+      --radius:20px; --max:1200px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;font-family:Inter,Arial,sans-serif;color:var(--text);
+      background:
+        radial-gradient(900px 480px at 100% 0%, rgba(75,151,255,.14), transparent 55%),
+        radial-gradient(700px 380px at 0% 0%, rgba(243,200,91,.12), transparent 50%),
+        linear-gradient(180deg,var(--bg) 0%, var(--bg2) 100%);
+    }
+    .wrap{max-width:var(--max);margin:auto;padding:24px}
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:var(--radius);
+      padding:20px;
+      box-shadow:var(--shadow);
+      margin-bottom:18px;
+    }
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    input, textarea{
+      width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.04);color:#fff;outline:none
+    }
+    textarea{min-height:95px;resize:vertical}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;
+      padding:12px 16px;border-radius:14px;border:1px solid transparent;
+      font-weight:800;cursor:pointer
+    }
+    .btn-primary{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#08111d}
+    .btn-secondary{background:rgba(255,255,255,.05);border-color:var(--line);color:#fff}
+    .hidden{display:none}
+    .small{font-size:12px;color:var(--muted)}
+    .topstats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .stat{padding:14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+    .stat b{display:block;color:var(--gold);font-size:24px}
+    .actionbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    h1,h2,h3{margin:0 0 10px}
+    .ok{color:#9fe4b7}
+    @media (max-width:768px){.row,.topstats{grid-template-columns:1fr}.wrap{padding:16px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" id="loginBox">
+      <h1>ARTEMIS Admin PRO Postgres</h1>
+      <p class="small">Bản bền vững: dữ liệu tín hiệu và gói giá lưu trong Postgres, không tự quay về như lưu file.</p>
+      <input type="password" id="password" placeholder="Nhập mật khẩu admin">
+      <div class="actionbar">
+        <button class="btn btn-primary" onclick="login()">Vào admin</button>
+      </div>
+    </div>
+
+    <div id="adminBox" class="hidden">
+      <div class="card">
+        <h2>Bảng điều khiển</h2>
+        <div class="topstats">
+          <div class="stat"><span class="small">Số tín hiệu</span><b id="signalCount">0</b></div>
+          <div class="stat"><span class="small">Số gói</span><b id="packageCount">0</b></div>
+          <div class="stat"><span class="small">Lưu dữ liệu</span><b>Postgres</b></div>
+          <div class="stat"><span class="small">Trạng thái</span><b class="ok">Online</b></div>
+        </div>
+        <div class="actionbar">
+          <button class="btn btn-secondary" onclick="showTab('signals')">Sửa tín hiệu</button>
+          <button class="btn btn-secondary" onclick="showTab('packages')">Sửa gói & giá</button>
+        </div>
+      </div>
+
+      <div id="signalsTab" class="card hidden">
+        <h2>Sửa phần tín hiệu</h2>
+        <div id="signalsList"></div>
+        <div class="actionbar">
+          <button class="btn btn-primary" onclick="saveSignals()">Lưu tín hiệu lên Postgres</button>
+          <button class="btn btn-secondary" onclick="loadSignals()">Tải lại tín hiệu</button>
+          <button class="btn btn-secondary" onclick="addSignal()">Thêm tín hiệu</button>
+        </div>
+      </div>
+
+      <div id="packagesTab" class="card hidden">
+        <h2>Sửa phần gói & giá</h2>
+        <div id="packagesList"></div>
+        <div class="actionbar">
+          <button class="btn btn-primary" onclick="savePackages()">Lưu gói giá lên Postgres</button>
+          <button class="btn btn-secondary" onclick="loadPackages()">Tải lại gói giá</button>
+          <button class="btn btn-secondary" onclick="addPackage()">Thêm gói</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let adminPassword = "";
+    let signals = [];
+    let packages = [];
+
+    async function fetchJson(url, options = {}) {
+      const res = await fetch(url, options);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Lỗi yêu cầu');
+      return data;
+    }
+
+    async function login() {
+      const password = document.getElementById('password').value;
+      try {
+        await fetchJson('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+        adminPassword = password;
+        document.getElementById('loginBox').classList.add('hidden');
+        document.getElementById('adminBox').classList.remove('hidden');
+        showTab('signals');
+        await Promise.all([loadSignals(), loadPackages()]);
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function showTab(name) {
+      document.getElementById('signalsTab').classList.add('hidden');
+      document.getElementById('packagesTab').classList.add('hidden');
+      document.getElementById(name + 'Tab').classList.remove('hidden');
+    }
+
+    async function loadSignals() {
+      signals = await fetchJson('/api/signals');
+      document.getElementById('signalCount').textContent = signals.length;
+      renderSignals();
+    }
+
+    function renderSignals() {
+      document.getElementById('signalsList').innerHTML = signals.map((item, i) => `
+        <div class="card">
+          <div class="row">
+            <div><input value="${item.badge || ''}" oninput="signals[${i}].badge=this.value" placeholder="Badge"></div>
+            <div><input value="${item.title || ''}" oninput="signals[${i}].title=this.value" placeholder="Tiêu đề"></div>
+          </div>
+          <textarea oninput="signals[${i}].desc=this.value" placeholder="Mô tả">${item.desc || ''}</textarea>
+          <input value="${(item.tags || []).join(', ')}" oninput="signals[${i}].tags=this.value.split(',').map(v=>v.trim()).filter(Boolean)" placeholder="Tags, cách nhau dấu phẩy">
+          <div class="actionbar"><button class="btn btn-secondary" onclick="removeSignal(${i})">Xóa tín hiệu này</button></div>
+        </div>
+      `).join('');
+    }
+
+    function addSignal() {
+      signals.push({ badge: "NEW SIGNAL", title: "XAUUSD M15", desc: "Mô tả tín hiệu mới", tags: ["RSI OK"] });
+      document.getElementById('signalCount').textContent = signals.length;
+      renderSignals();
+    }
+
+    function removeSignal(i) {
+      signals.splice(i, 1);
+      document.getElementById('signalCount').textContent = signals.length;
+      renderSignals();
+    }
+
+    async function saveSignals() {
+      try {
+        await fetchJson('/api/admin/signals', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-password': adminPassword
+          },
+          body: JSON.stringify(signals)
+        });
+        alert('Đã lưu tín hiệu lên Postgres');
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    async function loadPackages() {
+      packages = await fetchJson('/api/packages');
+      document.getElementById('packageCount').textContent = packages.length;
+      renderPackages();
+    }
+
+    function renderPackages() {
+      document.getElementById('packagesList').innerHTML = packages.map((item, i) => `
+        <div class="card">
+          <div class="row">
+            <div><input value="${item.tag || ''}" oninput="packages[${i}].tag=this.value" placeholder="Tag"></div>
+            <div><input value="${item.name || ''}" oninput="packages[${i}].name=this.value" placeholder="Tên gói"></div>
+          </div>
+          <div class="row">
+            <div><input value="${item.priceMain || ''}" oninput="packages[${i}].priceMain=this.value" placeholder="Giá chính"></div>
+            <div><input value="${item.priceUnit || ''}" oninput="packages[${i}].priceUnit=this.value" placeholder="Đơn vị K/TR"></div>
+          </div>
+          <input value="${item.desc || ''}" oninput="packages[${i}].desc=this.value" placeholder="Mô tả">
+          <input value="${item.button || ''}" oninput="packages[${i}].button=this.value" placeholder="Text nút">
+          <input value="${(item.features || []).join(' | ')}" oninput="packages[${i}].features=this.value.split('|').map(v=>v.trim()).filter(Boolean)" placeholder="Quyền lợi, ngăn cách bằng |">
+          <div class="row">
+            <div class="small">Ví dụ quyền lợi: Full BOT | Dễ dùng | Hỗ trợ</div>
+            <div><label class="small"><input type="checkbox" ${item.primary ? 'checked' : ''} onchange="packages[${i}].primary=this.checked"> Gói chính nổi bật</label></div>
+          </div>
+          <div class="actionbar"><button class="btn btn-secondary" onclick="removePackage(${i})">Xóa gói này</button></div>
+        </div>
+      `).join('');
+    }
+
+    function addPackage() {
+      packages.push({ tag: "GÓI MỚI", name: "Gói mới", priceMain: "0", priceUnit: "K", desc: "Mô tả gói mới", button: "Đăng ký ngay", features: ["Quyền lợi 1"], primary: false });
+      document.getElementById('packageCount').textContent = packages.length;
+      renderPackages();
+    }
+
+    function removePackage(i) {
+      packages.splice(i, 1);
+      document.getElementById('packageCount').textContent = packages.length;
+      renderPackages();
+    }
+
+    async function savePackages() {
+      try {
+        await fetchJson('/api/admin/packages', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-password': adminPassword
+          },
+          body: JSON.stringify(packages)
+        });
+        alert('Đã lưu gói giá lên Postgres');
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+  </script>
+</body>
+</html>
